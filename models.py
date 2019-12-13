@@ -88,6 +88,18 @@ class NarrativeXmlTable(XmlTable):
         s += f" WHERE iati_version = {self.iati_version}"
         return s
 
+    def materialize(self):
+        from django.db import connection
+
+        name = slugify(f"{self.row_expression}{self.iati_version}".replace("-", "_"))
+        with connection.cursor() as c:
+            c.execute(f'DROP MATERIALIZED VIEW IF EXISTS "{name}" CASCADE')
+            try:
+                c.execute(f'CREATE MATERIALIZED VIEW "{name}" AS {self.sql}')
+            except Exception as e:
+                logger.error(f"""Unable to continue; SQL was {self.sql}""", exc_info=1)
+                # continue
+
 
 class IatiXmlTable(XmlTable):
     iati_version = models.DecimalField(max_digits=3, decimal_places=2, default=2.03)
@@ -118,7 +130,8 @@ WHERE {table}.iati_version = {self.iati_version}
             except Exception as e:
                 logger.error(f"""Unable to continue; SQL was {self.sql}""", exc_info=1)
                 # continue
-
+    def __str__(self):
+        return '{} v{}'.format(super().__str__(), self.iati_version)
 
 class IatiXmlColumn(XmlColumn):
     pass
