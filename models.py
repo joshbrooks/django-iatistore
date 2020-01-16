@@ -47,7 +47,8 @@ class IatiActivities(models.Model):
     iati_version = models.DecimalField(max_digits=3, decimal_places=2)
 
     @classmethod
-    def fetch(cls, params):
+    def fetch(cls, params=None):
+        params = params or {}
         for a in DataStoreRequest(params).activities():
             iati_identifier = a.find("iati-identifier").text.strip()
             content = etree.tostring(a)
