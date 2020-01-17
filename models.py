@@ -6,6 +6,11 @@ from django.utils.text import slugify
 
 from cachedrequests.requesters import DataStoreRequest, etree
 from xmltables.models import XmlBaseModel, XmlColumn, XmlField, XmlTable
+from django.contrib.postgres.aggregates import ArrayAgg
+from django.contrib.postgres.fields import JSONField
+from typing import List
+from collections import defaultdict
+from decimal import Decimal
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +68,24 @@ class IatiActivities(models.Model):
                 )
             except Exception as e:
                 logger.error(e)
+
+
+class IatiCodelist(models.Model):
+    """
+    Lookup tables for IATI codelists
+    """
+    content = XmlField()
+    iati_version = models.DecimalField(max_digits=3, decimal_places=2)
+    
+    # These are extracted from the XML
+    name = models.TextField()
+    complete = models.BooleanField()
+    embedded = models.BooleanField()
+    name = JSONField()
+    description = JSONField()
+
+    def save(self, *args, **kwargs):
+        raise NotImplementedError
 
 
 class NarrativeXmlTable(XmlTable):
@@ -134,5 +157,25 @@ WHERE {table}.iati_version = {self.iati_version}
     def __str__(self):
         return '{} v{}'.format(super().__str__(), self.iati_version)
 
+
+class IatiXmlColumnManager(models.Manager):
+    def with_versions(self):
+        return self.get_queryset().annotate(versions=ArrayAgg('xmltable__iatixmltable__iati_version'))
+
+    def get_versions_for_column(self):
+        """
+        For individual column and row expressions
+        show which IATI versions that particular XML
+        path is valid for
+        """
+        return self.get_queryset().values('pk', 'column_expression', 'xmltable__row_expression').annotate(versions = ArrayAgg('xmltable__iatixmltable__iati_version'))
+
+    def get_columns_for_versions(self, versions: List[Decimal]):
+        """
+        Return columns which are common to given IATI versions
+        """
+        self.get_versions_for_column().filter(versions__contains=versions)
+
+
 class IatiXmlColumn(XmlColumn):
-    pass
+    objects = IatiXmlColumnManager()
