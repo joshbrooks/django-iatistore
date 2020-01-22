@@ -1,19 +1,24 @@
 # Create your models here.
 import logging
 
-from django.db import models
+from django.db import models, connection
 from django.utils.text import slugify
 
-from cachedrequests.requesters import DataStoreRequest, etree
+from importlib import resources
+from iatistore import iatisql
+from cachedrequests.requesters import DataStoreRequest, etree, CodelistRequest, CodelistMappingRequest
+from requests.exceptions import HTTPError
 from xmltables.models import XmlBaseModel, XmlColumn, XmlField, XmlTable
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.contrib.postgres.fields import JSONField
 from typing import List
 from collections import defaultdict
 from decimal import Decimal
+from django.conf import settings
+iati_versions = getattr(settings, 'IATI_VERSIONS')
+iati_version = getattr(settings, 'DEFAULT_IATI_VERSION')
 
 logger = logging.getLogger(__name__)
-
 
 narrative_fields = """
 SELECT 
@@ -44,6 +49,9 @@ FROM (
 
 
 class IatiActivities(models.Model):
+    """
+    The main data source for each Activity
+    """
     id = models.TextField(primary_key=True)
     iati_identifier = models.TextField()
     content = XmlField()
@@ -53,6 +61,10 @@ class IatiActivities(models.Model):
 
     @classmethod
     def fetch(cls, params=None):
+        """
+        For Uzbekistan (MIFT-AIMS load)
+        IatiActivities.fetch(params = [('recipient-country', 'UZ'),('stream', 'True')])
+        """
         params = params or {}
         for a in DataStoreRequest(params).activities():
             iati_identifier = a.find("iati-identifier").text.strip()
@@ -70,26 +82,208 @@ class IatiActivities(models.Model):
                 logger.error(e)
 
 
+class IatiCodelistMapping(models.Model):
+    content = XmlField(null=True)
+    iati_version = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True, unique=True)
+
+    # Fetch on save
+    def save(self, *args, **kwargs):
+        if not self.content:
+            self.content = CodelistMappingRequest(version=self.iati_version).content().decode()
+        super().save(*args, **kwargs)
+    
+    @classmethod
+    def update_mappings(cls, iati_version: Decimal = 2.03):
+        cls.objects.get_or_create(iati_version = iati_version)[0].save()
+
+    @classmethod
+    def update_mappings_all(cls):
+        versions = getattr(settings, 'IATI_VERSIONS')
+        for v in versions:
+            cls.update_mappings(iati_version = v)
+
+
+class CodelistMappingXmlColumn(XmlColumn):
+    """
+    This ought to have path, codelist, and condition attributes.
+    This plus the content of IatiCodelistMapping permits
+    us to determine which lookup applies to which attribute.
+    """
+    pass
+
+
 class IatiCodelist(models.Model):
     """
     Lookup tables for IATI codelists
     """
-    content = XmlField()
-    iati_version = models.DecimalField(max_digits=3, decimal_places=2)
+
+    EMBEDDED_CODELISTS = {
+        "ActivityDateType",
+        "ActivityStatus",
+        "BudgetStatus",  # This one for 2.02+
+        "BudgetType",
+        "DocumentCategory",
+        "GazetteerAgency",
+        "OrganisationRole",
+        "RelatedActivityType",
+        "TransactionType"
+    }
+
+    NONEMBEDDED_CODELISTS = {
+        "ActivityScope",
+        "AidType-category",
+        "AidType",
+        "AidTypeVocabulary",
+        "BudgetIdentifier",
+        "BudgetIdentifierSector-category",
+        "BudgetIdentifierSector",
+        "BudgetIdentifierVocabulary",
+        "BudgetNotProvided",
+        "CRSAddOtherFlags",
+        "CRSChannelCode",
+        "CashandVoucherModalities",
+        "CollaborationType",
+        "ConditionType",
+        "ContactType",
+        "Country",
+        "Currency",
+        "DescriptionType",
+        "DisbursementChannel",
+        "DocumentCategory-category",
+        "EarmarkingCategory",
+        "FileFormat",
+        "FinanceType-category",
+        "FinanceType",
+        "FlowType",
+        "GeographicExactness",
+        "GeographicLocationClass",
+        "GeographicLocationReach",
+        "GeographicVocabulary",
+        "GeographicalPrecision",
+        "HumanitarianScopeType",
+        "HumanitarianScopeVocabulary",
+        "IATIOrganisationIdentifier",
+        "IndicatorMeasure",
+        "IndicatorVocabulary",
+        "Language",
+        "LoanRepaymentPeriod",
+        "LoanRepaymentType",
+        "LocationType-category",
+        "LocationType",
+        "OrganisationIdentifier",
+        "OrganisationRegistrationAgency",
+        "OrganisationType",
+        "OtherIdentifierType",
+        "PolicyMarker",
+        "PolicyMarkerVocabulary",
+        "PolicySignificance",
+        "PublisherType",
+        "Region",
+        "RegionVocabulary",
+        "ResultType",
+        "ResultVocabulary",
+        "Sector",
+        "SectorCategory",
+        "SectorVocabulary",
+        "TagVocabulary",
+        "TiedStatus",
+        "UNSDG-Goals",
+        "UNSDG-Targets",
+        "VerificationStatus",
+        "Version"
+    }
+
+    content = XmlField(null=True)
+    iati_version = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
     
     # These are extracted from the XML
-    name = models.TextField()
+    label = models.TextField()
     complete = models.BooleanField()
-    embedded = models.BooleanField()
-    name = JSONField()
-    description = JSONField()
+    embedded = models.BooleanField(default=False)
+
+    # Language code: Text value fields
+    name = JSONField(blank=True, null=True)
+    description = JSONField(blank=True, null=True)
+
+    class Meta:
+        unique_together = [['iati_version', 'label']]
+
+    @staticmethod
+    def _set_names():
+        """
+        Import the code from the "iatisql" directory
+        and runthe functions there to update the name and description fields
+        """
+        
+        with connection.cursor() as c:
+            c.execute(
+                resources.read_text(iatisql, 'codelist_name.sql')
+            )
+            c.execute(
+                resources.read_text(iatisql, 'codelist_description.sql')
+            )
 
     def save(self, *args, **kwargs):
-        raise NotImplementedError
+        if not self.content:
+            logger.info(F'Fetching codelist {self.label} for {self.iati_version}')
+            try:
+                response = CodelistRequest(version=self.iati_version, codelist_name=self.label, embedded=self.embedded)
+                content = response.as_xml()
+            except HTTPError:
+                logger.warn('Appears not to exist')
+                return
+            self.content = etree.tostring(content).decode()
+            assert self.label == content.attrib.get('name')
+            self.complete = True if content.attrib.get('complete', None) == '1' else False
+        super().save(*args, **kwargs)
+
+
+    @classmethod
+    def fetch_all(cls):
+        for v in iati_versions:
+            logger.info(F'Fetching codelists for {v}')
+            for label in cls.EMBEDDED_CODELISTS:
+                try:
+                    instance = cls.objects.get(iati_version=v, label=label).save()
+                except cls.DoesNotExist:
+                    cls(iati_version=v, label=label, embedded=True).save()
+    
+            for label in cls.NONEMBEDDED_CODELISTS:
+                try:
+                    instance = cls.objects.get(iati_version=v, label=label).save()
+                except cls.DoesNotExist:
+                    cls(iati_version=v, label=label, embedded=False).save()
+
+    def update_items(self):
+        pass
+
+class IatiCodelistItem(models.Model):
+    """
+    Fragments of "Codelist" xml live here
+    """
+    code = models.TextField()
+    name = JSONField(blank=True, null=True)
+    description = JSONField(blank=True, null=True)
+
+    # Category and IATI Version
+    # taken together are a composite FK to
+    # IatiCodelist
+    codelist = models.ForeignKey(IatiCodelist, on_delete=models.CASCADE)
+    url = models.URLField(null=True, blank=True)
+    # public_database = 
+    status = models.TextField(null=True, blank=True)
+    activation_date = models.DateField(null=True, blank=True)
+    withdrawal_date = models.DateField(null=True, blank=True)
+
+    class Meta:
+        unique_together = [['codelist', 'code']]
+        indexes = [
+            models.Index(fields=['codelist', 'code'])
+        ]
 
 
 class NarrativeXmlTable(XmlTable):
-    iati_version = models.DecimalField(max_digits=3, decimal_places=2, default=2.03)
+    iati_version = models.DecimalField(max_digits=3, decimal_places=2, default=iati_version)
     narrative_type = models.CharField(max_length=512)
 
     @property
@@ -126,7 +320,11 @@ class NarrativeXmlTable(XmlTable):
 
 
 class IatiXmlTable(XmlTable):
-    iati_version = models.DecimalField(max_digits=3, decimal_places=2, default=2.03)
+    iati_version = models.DecimalField(max_digits=3, decimal_places=2, default=iati_version)
+
+    @property
+    def table_name(self):
+        return slugify(f"{self.row_expression}{self.iati_version}".replace("-", "_"))
 
     @property
     def sql(self):
@@ -146,11 +344,10 @@ WHERE {table}.iati_version = {self.iati_version}
     def materialize(self):
         from django.db import connection
 
-        name = slugify(f"{self.row_expression}{self.iati_version}".replace("-", "_"))
         with connection.cursor() as c:
-            c.execute(f'DROP MATERIALIZED VIEW IF EXISTS "{name}" CASCADE')
+            c.execute(f'DROP MATERIALIZED VIEW IF EXISTS "{self.table_name}" CASCADE')
             try:
-                c.execute(f'CREATE MATERIALIZED VIEW "{name}" AS {self.sql}')
+                c.execute(f'CREATE MATERIALIZED VIEW "{self.table_name}" AS {self.sql}')
             except Exception as e:
                 logger.error(f"""Unable to continue; SQL was {self.sql}""", exc_info=1)
                 # continue
@@ -174,8 +371,14 @@ class IatiXmlColumnManager(models.Manager):
         """
         Return columns which are common to given IATI versions
         """
-        self.get_versions_for_column().filter(versions__contains=versions)
+        return self.get_versions_for_column().filter(versions__contains=versions)
 
+    def get_common_fields(self):
+        """
+        Which fields are valid for every IATI version
+        in settings
+        """
+        return self.get_columns_for_versions(versions=iati_versions)
 
 class IatiXmlColumn(XmlColumn):
     objects = IatiXmlColumnManager()
