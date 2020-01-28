@@ -2,11 +2,17 @@
 import logging
 
 from django.db import models, connection
+from django.db.utils import ProgrammingError
 from django.utils.text import slugify
 
 from importlib import resources
 from iatistore import iatisql
-from cachedrequests.requesters import DataStoreRequest, etree, CodelistRequest, CodelistMappingRequest
+from cachedrequests.requesters import (
+    DataStoreRequest,
+    etree,
+    CodelistRequest,
+    CodelistMappingRequest,
+)
 from requests.exceptions import HTTPError
 from xmltables.models import XmlBaseModel, XmlColumn, XmlField, XmlTable
 from django.contrib.postgres.aggregates import ArrayAgg
@@ -15,8 +21,9 @@ from typing import List
 from collections import defaultdict
 from decimal import Decimal
 from django.conf import settings
-iati_versions = getattr(settings, 'IATI_VERSIONS')
-iati_version = getattr(settings, 'DEFAULT_IATI_VERSION')
+
+iati_versions = getattr(settings, "IATI_VERSIONS")
+iati_version = getattr(settings, "DEFAULT_IATI_VERSION")
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +59,7 @@ class IatiActivities(models.Model):
     """
     The main data source for each Activity
     """
+
     id = models.TextField(primary_key=True)
     iati_identifier = models.TextField()
     content = XmlField()
@@ -84,23 +92,27 @@ class IatiActivities(models.Model):
 
 class IatiCodelistMapping(models.Model):
     content = XmlField(null=True)
-    iati_version = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True, unique=True)
+    iati_version = models.DecimalField(
+        max_digits=3, decimal_places=2, null=True, blank=True, unique=True
+    )
 
     # Fetch on save
     def save(self, *args, **kwargs):
         if not self.content:
-            self.content = CodelistMappingRequest(version=self.iati_version).content().decode()
+            self.content = (
+                CodelistMappingRequest(version=self.iati_version).content().decode()
+            )
         super().save(*args, **kwargs)
-    
+
     @classmethod
     def update_mappings(cls, iati_version: Decimal = 2.03):
-        cls.objects.get_or_create(iati_version = iati_version)[0].save()
+        cls.objects.get_or_create(iati_version=iati_version)[0].save()
 
     @classmethod
     def update_mappings_all(cls):
-        versions = getattr(settings, 'IATI_VERSIONS')
+        versions = getattr(settings, "IATI_VERSIONS")
         for v in versions:
-            cls.update_mappings(iati_version = v)
+            cls.update_mappings(iati_version=v)
 
 
 class CodelistMappingXmlColumn(XmlColumn):
@@ -109,6 +121,7 @@ class CodelistMappingXmlColumn(XmlColumn):
     This plus the content of IatiCodelistMapping permits
     us to determine which lookup applies to which attribute.
     """
+
     pass
 
 
@@ -126,7 +139,7 @@ class IatiCodelist(models.Model):
         "GazetteerAgency",
         "OrganisationRole",
         "RelatedActivityType",
-        "TransactionType"
+        "TransactionType",
     }
 
     NONEMBEDDED_CODELISTS = {
@@ -190,12 +203,14 @@ class IatiCodelist(models.Model):
         "UNSDG-Goals",
         "UNSDG-Targets",
         "VerificationStatus",
-        "Version"
+        "Version",
     }
 
     content = XmlField(null=True)
-    iati_version = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
-    
+    iati_version = models.DecimalField(
+        max_digits=3, decimal_places=2, null=True, blank=True
+    )
+
     # These are extracted from the XML
     label = models.TextField()
     complete = models.BooleanField()
@@ -205,8 +220,11 @@ class IatiCodelist(models.Model):
     name = JSONField(blank=True, null=True)
     description = JSONField(blank=True, null=True)
 
+    def __str__(self):
+        return f"{self.label} {self.iati_version}"
+
     class Meta:
-        unique_together = [['iati_version', 'label']]
+        unique_together = [["iati_version", "label"]]
 
     @staticmethod
     def _set_names():
@@ -214,40 +232,41 @@ class IatiCodelist(models.Model):
         Import the code from the "iatisql" directory
         and runthe functions there to update the name and description fields
         """
-        
+
         with connection.cursor() as c:
-            c.execute(
-                resources.read_text(iatisql, 'codelist_name.sql')
-            )
-            c.execute(
-                resources.read_text(iatisql, 'codelist_description.sql')
-            )
+            c.execute(resources.read_text(iatisql, "codelist_name.sql"))
+            c.execute(resources.read_text(iatisql, "codelist_description.sql"))
 
     def save(self, *args, **kwargs):
         if not self.content:
-            logger.info(F'Fetching codelist {self.label} for {self.iati_version}')
+            logger.info(f"Fetching codelist {self.label} for {self.iati_version}")
             try:
-                response = CodelistRequest(version=self.iati_version, codelist_name=self.label, embedded=self.embedded)
+                response = CodelistRequest(
+                    version=self.iati_version,
+                    codelist_name=self.label,
+                    embedded=self.embedded,
+                )
                 content = response.as_xml()
             except HTTPError:
-                logger.warn('Appears not to exist')
+                logger.warn("Appears not to exist")
                 return
             self.content = etree.tostring(content).decode()
-            assert self.label == content.attrib.get('name')
-            self.complete = True if content.attrib.get('complete', None) == '1' else False
+            assert self.label == content.attrib.get("name")
+            self.complete = (
+                True if content.attrib.get("complete", None) == "1" else False
+            )
         super().save(*args, **kwargs)
-
 
     @classmethod
     def fetch_all(cls):
         for v in iati_versions:
-            logger.info(F'Fetching codelists for {v}')
+            logger.info(f"Fetching codelists for {v}")
             for label in cls.EMBEDDED_CODELISTS:
                 try:
                     instance = cls.objects.get(iati_version=v, label=label).save()
                 except cls.DoesNotExist:
                     cls(iati_version=v, label=label, embedded=True).save()
-    
+
             for label in cls.NONEMBEDDED_CODELISTS:
                 try:
                     instance = cls.objects.get(iati_version=v, label=label).save()
@@ -257,10 +276,12 @@ class IatiCodelist(models.Model):
     def update_items(self):
         pass
 
+
 class IatiCodelistItem(models.Model):
     """
     Fragments of "Codelist" xml live here
     """
+
     code = models.TextField()
     name = JSONField(blank=True, null=True)
     description = JSONField(blank=True, null=True)
@@ -270,20 +291,25 @@ class IatiCodelistItem(models.Model):
     # IatiCodelist
     codelist = models.ForeignKey(IatiCodelist, on_delete=models.CASCADE)
     url = models.URLField(null=True, blank=True)
-    # public_database = 
+    # public_database =
     status = models.TextField(null=True, blank=True)
     activation_date = models.DateField(null=True, blank=True)
     withdrawal_date = models.DateField(null=True, blank=True)
 
     class Meta:
-        unique_together = [['codelist', 'code']]
-        indexes = [
-            models.Index(fields=['codelist', 'code'])
-        ]
+        unique_together = [["codelist", "code"]]
+        indexes = [models.Index(fields=["codelist", "code"])]
+
+    def __str__(self):
+        default_language = "en"
+        name = self.name.get(default_language) if self.name else "Unnamed"
+        return f"{self.code} {name}"
 
 
 class NarrativeXmlTable(XmlTable):
-    iati_version = models.DecimalField(max_digits=3, decimal_places=2, default=iati_version)
+    iati_version = models.DecimalField(
+        max_digits=3, decimal_places=2, default=iati_version
+    )
     narrative_type = models.CharField(max_length=512)
 
     @property
@@ -320,7 +346,9 @@ class NarrativeXmlTable(XmlTable):
 
 
 class IatiXmlTable(XmlTable):
-    iati_version = models.DecimalField(max_digits=3, decimal_places=2, default=iati_version)
+    iati_version = models.DecimalField(
+        max_digits=3, decimal_places=2, default=iati_version
+    )
 
     @property
     def table_name(self):
@@ -341,31 +369,62 @@ FROM
 WHERE {table}.iati_version = {self.iati_version}
 """
 
-    def materialize(self):
-        from django.db import connection
-
+    # TODO: Refactor this into a reusable thing
+    def matview_create(self):
         with connection.cursor() as c:
-            c.execute(f'DROP MATERIALIZED VIEW IF EXISTS "{self.table_name}" CASCADE')
             try:
                 c.execute(f'CREATE MATERIALIZED VIEW "{self.table_name}" AS {self.sql}')
             except Exception as e:
                 logger.error(f"""Unable to continue; SQL was {self.sql}""", exc_info=1)
-                # continue
+
+    def matview_drop(self):
+        name = slugify(f"{self.row_expression}{self.iati_version}".replace("-", "_"))
+        with connection.cursor() as c:
+            c.execute(f'DROP MATERIALIZED VIEW IF EXISTS "{self.table_name}" CASCADE')
+
+    def execute(self):
+        """
+        Override the parent behaviour to pull from materialilzed view
+        """
+        with connection.cursor() as c:
+            c.execute(f"SELECT * FROM {self.table_name}")
+            return c.fetchall()
+
+    def execute_with_columns(self, auto_create=True):
+        """
+        Override the parent behaviour to pull from materialilzed view
+        """
+        with connection.cursor() as c:
+            try:
+                c.execute(f"SELECT * FROM {self.table_name}")
+            except ProgrammingError:
+                self.matview_create()
+                return self.execute_with_columns(auto_create=False)
+
+            return [col[0] for col in c.description], c.fetchall()
+
     def __str__(self):
-        return '{} v{}'.format(super().__str__(), self.iati_version)
+        return "{} v{}".format(super().__str__(), self.iati_version)
 
 
 class IatiXmlColumnManager(models.Manager):
     def with_versions(self):
-        return self.get_queryset().annotate(versions=ArrayAgg('xmltable__iatixmltable__iati_version'))
+        return self.get_queryset().annotate(
+            versions=ArrayAgg("xmltable__iatixmltable__iati_version")
+        )
 
-    def get_versions_for_column(self):
+    def get_versions_for_column(self, row_expression):
         """
         For individual column and row expressions
         show which IATI versions that particular XML
         path is valid for
         """
-        return self.get_queryset().values('pk', 'column_expression', 'xmltable__row_expression').annotate(versions = ArrayAgg('xmltable__iatixmltable__iati_version'))
+        return (
+            self.get_queryset()
+            .filter(xmltable__row_expression=row_expression)
+            .values("pk", "column_expression")
+            .annotate(versions=ArrayAgg("xmltable__iatixmltable__iati_version"))
+        )
 
     def get_columns_for_versions(self, versions: List[Decimal]):
         """
@@ -379,6 +438,7 @@ class IatiXmlColumnManager(models.Manager):
         in settings
         """
         return self.get_columns_for_versions(versions=iati_versions)
+
 
 class IatiXmlColumn(XmlColumn):
     objects = IatiXmlColumnManager()

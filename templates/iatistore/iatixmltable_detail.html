@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block scripts %}
+
+{% endblock scripts %}
+
+{% block content %}
+
+<p>
+JSON Link at <a href="{% url 'iatixmltable-detail-json' pk=object.pk %}">here</a>
+</p>
+<h1>Table SQL</h1>
+<pre>
+    {{object.sql}}
+</pre>
+
+<h1>Columns</h1>
+{% for col in object.columns.all %}
+<p>{{col}}</p>
+{% endfor %}
+
+<table>
+    <thead>
+        <tr>
+            {% for header in headers %}
+            <th scope="col">{{header}}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            {% for column in rows|first %}
+            <td>{{column}}</td>
+            {% endfor %}
+        </tr>
+    </tbody>
+</table>
+
+{% endblock %}

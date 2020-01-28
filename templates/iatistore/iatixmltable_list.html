@@ -1,0 +1,14 @@
+{% extends "base.html" %} {% block content %}
+<h2>Xml Tables</h2>
+{{object_list.count}}
+<ul>
+    {% for table in object_list %}
+    <li>
+        {{table.pk}}
+        {{ table.document_expression }}
+        {{table.iati_version}}
+        {{table.row_expression}}
+    </li>
+    {% endfor %}
+</ul>
+{% endblock %}
