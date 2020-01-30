@@ -95,23 +95,21 @@ class IatiTransactions(View):
             row_expression="/iati-activity/transaction"
         )
 
-        # # On error
-        # [
-        #     i.matview_create()
-        #     for i in iatixmltables.IatiXmlTable.objects.filter(
-        #         row_expression="/iati-activity/transaction"
+        # columns = list(
+        #     iatixmltables.IatiXmlColumn.objects.get_versions_for_column(
+        #         "/iati-activity/transaction"
         #     )
-        # ]
+        #     .filter(versions__contains=[2.03, 2.01, 2.02])
+        #     .values_list("col_name", flat=True)
+        #     .distinct()
+        # )
 
-        # List of distinct column names for versions
-        columns = list(
-            iatixmltables.IatiXmlColumn.objects.get_versions_for_column(
-                "/iati-activity/transaction"
-            )
-            .filter(versions__contains=[2.03, 2.01, 2.02])
-            .values_list("col_name", flat=True)
-            .distinct()
-        )
+        columns = [
+            "value",
+            "value_currency",
+            "value_value_date",
+            "transaction_type_code",
+        ]
 
         columns_join = ", ".join(columns)
 
@@ -126,5 +124,7 @@ class IatiTransactions(View):
             c.execute(sql)
             columns = [col[0] for col in c.description]
             return JsonResponse(
-                [dict(zip(columns, row)) for row in c.fetchall()[:100]], safe=False
+                [dict(zip(columns, row)) for row in c.fetchall()],
+                safe=False,
+                json_dumps_params={"indent": 1},
             )

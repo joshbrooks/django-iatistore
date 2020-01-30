@@ -426,18 +426,22 @@ class IatiXmlColumnManager(models.Manager):
             .annotate(versions=ArrayAgg("xmltable__iatixmltable__iati_version"))
         )
 
-    def get_columns_for_versions(self, versions: List[Decimal]):
+    def get_columns_for_versions(self, versions: List[Decimal], row_expression: str):
         """
         Return columns which are common to given IATI versions
         """
-        return self.get_versions_for_column().filter(versions__contains=versions)
+        return self.get_versions_for_column(row_expression).filter(
+            versions__contains=versions
+        )
 
-    def get_common_fields(self):
+    def get_common_fields(self, row_expression: str):
         """
         Which fields are valid for every IATI version
         in settings
         """
-        return self.get_columns_for_versions(versions=iati_versions)
+        return self.get_columns_for_versions(
+            versions=iati_versions, row_expression=row_expression
+        )
 
 
 class IatiXmlColumn(XmlColumn):

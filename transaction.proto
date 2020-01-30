@@ -1,0 +1,20 @@
+syntax = "proto2";
+
+package iatiproto;
+
+message Transaction {
+  required float value = 1;
+  optional string transaction_type_code = 2;
+  optional int32 datestamp = 4;
+}
+
+message ActivityTransactions {
+    enum IatiVersion {
+        V201 = 1;
+        V202 = 2;
+        V203 = 3;
+    }
+  required string iati_identifier = 1;
+  repeated Transaction transactions = 2;
+  optional IatiVersion type = 3;
+}
