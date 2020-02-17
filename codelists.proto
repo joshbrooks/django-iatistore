@@ -1,0 +1,44 @@
+syntax = "proto2";
+
+package iatiproto;
+
+enum IatiVersion {
+    V201 = 1;
+    V202 = 2;
+    V203 = 3;
+}
+
+enum Model {
+    CODELIST = 1;
+    CODELISTITEM = 2;
+}
+
+enum FieldForNarrative {
+    DESCRIPTION
+    NAME
+}
+
+enum LANGUAGE {
+    en = 1;
+    fr = 2;
+}
+
+message Codelist {
+    optional int32 id = 1;
+    optional IatiVersion iati_version = 2;
+    optional text label = 3;
+    optional boolean complete = 4;
+    optional boolean embedded = 5;
+    repeated Items = 6; 
+}
+
+message Narrative {
+    optional Model model = 1;
+    optional pk int32 = 2;
+    optional Language lang = 3;
+    optional text text = 4;
+}
+
+message CodelistItem {}
+
+message CodelistDescription {}

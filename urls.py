@@ -19,4 +19,9 @@ urlpatterns = [
         views.IatiTransactions.as_view(),
         name="transactions-json",
     ),
+    path(
+        "participatingorganisations.json",
+        views.IatiParticipatingOrganisation.as_view(),
+        name="partorg-json",
+    ),
 ]

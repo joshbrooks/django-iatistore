@@ -2,19 +2,50 @@ syntax = "proto2";
 
 package iatiproto;
 
+enum IatiVersion {
+    V201 = 1;
+    V202 = 2;
+    V203 = 3;
+}
+
 message Transaction {
-  required float value = 1;
-  optional string transaction_type_code = 2;
-  optional int32 datestamp = 4;
+    optional float value = 1;
+    optional string transaction_type_code = 2;
+    optional string deprecated = 3;
+    optional int32 datestamp = 4;
+    optional string currency = 5;
+    required string id = 6;
+    required string activity = 7;
 }
 
 message ActivityTransactions {
-    enum IatiVersion {
-        V201 = 1;
-        V202 = 2;
-        V203 = 3;
-    }
-  required string iati_identifier = 1;
-  repeated Transaction transactions = 2;
-  optional IatiVersion type = 3;
+    optional string iati_identifier = 1;
+    optional IatiVersion type = 2;
+    repeated Transaction transactions = 3;
+
+}
+
+message ActivityTransactionList {
+    repeated ActivityTransactions activities = 1;
+}
+
+message Activity {
+
+    optional string iati_identifier = 1;
+    optional IatiVersion type = 2;
+    optional string deprecated = 3;
+    optional string activity_scope_code = 4;
+    optional string activity_status_code = 5;
+    optional string reporting_org_ref = 6;
+}
+
+
+message ParticipatingOrganisation {
+
+    optional string iati_identifier = 1;
+    optional IatiVersion iati_version = 2;
+    optional string deprecated = 3;
+    optional string type = 4;
+    optional string ref = 5;
+    optional string role = 6;
 }
