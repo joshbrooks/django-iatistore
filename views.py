@@ -5,8 +5,11 @@ from . import models as iatixmltables
 from . import transaction_pb2
 from django.db import connection
 from collections import defaultdict
+from decimal import Decimal, getcontext
 
+import logging
 
+logger = logger.getLogger(__name__)
 class IatiXmlTableList(ListView):
     model = iatixmltables.IatiXmlTable
 
@@ -75,6 +78,19 @@ class IatiActivities(View):
             )
 
 
+from enum import Enum, auto
+
+
+class TransactionQuery(Enum):
+    iati_identifier = auto()
+    iati_version = auto()
+    value = auto()
+    value_currency = auto()
+    value_value_date = auto()
+    transaction_type_code = auto()
+    ref = auto()
+
+
 class IatiTransactions(View):
     """
     Returns all fields common to IATI versions 2.01, 2.02 and 2.03
@@ -87,20 +103,12 @@ class IatiTransactions(View):
         tables = iatixmltables.IatiXmlTable.objects.filter(
             row_expression="/iati-activity/transaction"
         )
-
-        columns = [
-            "value",
-            "value_currency",
-            "value_value_date",
-            "transaction_type_code",
-            "ref",
-        ]
-
-        columns_join = ", ".join(columns)
+        columns = TransactionQuery
+        columns_join = ", ".join([item.name for item in list(TransactionQuery)])
 
         sql = " UNION ".join(
             [
-                f"SELECT iati_identifier, iati_version, {columns_join} FROM {name}"
+                f'SELECT  {columns_join}, ROW_NUMBER() OVER (PARTITION BY iati_identifier) AS "ord" FROM {name}'
                 for name in [t.table_name for t in tables]
             ]
         )
@@ -113,29 +121,45 @@ class IatiTransactions(View):
             by_id = defaultdict(list)
             versions = {}
             for row in c.fetchall():
+
+                transaction_id = (
+                    row[columns.ref.value - 1]
+                    or f"{row[columns.iati_identifier.value - 1]} - {row[-1]}"
+                )
                 transaction = dict(
-                    value=float(row[2]),
-                    currency=row[3],
-                    datestamp=int(row[4].replace("-", "")),
-                    transaction_type_code=str(row[5]),
-                    id=row[6],
-                    activity=row[0],
+                    value=Decimal(row[columns.value.value - 1]),
+                    currency=row[columns.value_currency.value - 1],
+                    datestamp=int(
+                        row[columns.value_value_date.value - 1].replace("-", "")
+                    ),
+                    transaction_type_code=str(
+                        row[columns.transaction_type_code.value - 1]
+                    ),
+                    activity=row[columns.iati_identifier.value - 1],
+                    id=transaction_id,
                 )
 
                 by_id[row[0]].append(transaction)
                 if row[0] not in versions:
-
                     versions[row[0]] = "V%d" % (row[1] * 100)
 
             for act_id, ts in by_id.items():
                 act = activities.activities.add()
+                act.iati_identifier = act_id
+                act.type = getattr(transaction_pb2.IatiVersion, versions[act_id])
                 for t in ts:
                     transaction = act.transactions.add()
                     for field in t.keys():
                         value = t.get(field)
                         if value:
                             setattr(transaction, field, value)
-                    print(transaction.SerializeToString())
+
+                    ser = transaction.SerializeToString()
+
+                    # Also deserialize
+                    de = transaction_pb2.Transaction()
+                    de.ParseFromString(ser)
+                    logger.debug(de)
 
         return HttpResponse(
             activities.SerializeToString(), content_type="application/octet-stream"
