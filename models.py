@@ -14,7 +14,7 @@ from cachedrequests.requesters import (
     CodelistMappingRequest,
 )
 from requests.exceptions import HTTPError
-from xmltables.models import XmlBaseModel, XmlColumn, XmlField, XmlTable
+from xmltables.models import XmlColumn, XmlField, XmlTable
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.contrib.postgres.fields import JSONField
 from typing import List
@@ -89,6 +89,8 @@ class IatiActivities(models.Model):
             except Exception as e:
                 logger.error(e)
 
+    def __str__(self):
+        return f'{self.iati_identifier}'
 
 class IatiCodelistMapping(models.Model):
     content = XmlField(null=True)

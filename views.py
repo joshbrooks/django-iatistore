@@ -9,7 +9,7 @@ from decimal import Decimal, getcontext
 
 import logging
 
-logger = logger.getLogger(__name__)
+logger = logging.getLogger(__name__)
 class IatiXmlTableList(ListView):
     model = iatixmltables.IatiXmlTable
 
