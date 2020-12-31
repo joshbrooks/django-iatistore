@@ -6,12 +6,12 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('iatistore', '0008_iaticodelist'),
+        ("iatistore", "0008_iaticodelist"),
     ]
 
     operations = [
         migrations.AlterUniqueTogether(
-            name='iaticodelist',
-            unique_together={('iati_version', 'label')},
+            name="iaticodelist",
+            unique_together={("iati_version", "label")},
         ),
     ]

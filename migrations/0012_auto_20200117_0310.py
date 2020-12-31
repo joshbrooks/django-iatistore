@@ -6,13 +6,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('iatistore', '0011_iaticodelistmapping'),
+        ("iatistore", "0011_iaticodelistmapping"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='iaticodelistmapping',
-            name='iati_version',
-            field=models.DecimalField(blank=True, decimal_places=2, max_digits=3, null=True, unique=True),
+            model_name="iaticodelistmapping",
+            name="iati_version",
+            field=models.DecimalField(
+                blank=True, decimal_places=2, max_digits=3, null=True, unique=True
+            ),
         ),
     ]

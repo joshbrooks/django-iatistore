@@ -8,22 +8,46 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('iatistore', '0013_codelistmappingxmlcolumn'),
+        ("iatistore", "0013_codelistmappingxmlcolumn"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='IatiCodelistItem',
+            name="IatiCodelistItem",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('code', models.TextField()),
-                ('name', django.contrib.postgres.fields.jsonb.JSONField(blank=True, null=True)),
-                ('description', django.contrib.postgres.fields.jsonb.JSONField(blank=True, null=True)),
-                ('url', models.URLField(blank=True, null=True)),
-                ('status', models.TextField(blank=True, null=True)),
-                ('activation_date', models.DateField(blank=True, null=True)),
-                ('withdrawal_date', models.DateField(blank=True, null=True)),
-                ('codelist', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='iatistore.IatiCodelist')),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("code", models.TextField()),
+                (
+                    "name",
+                    django.contrib.postgres.fields.jsonb.JSONField(
+                        blank=True, null=True
+                    ),
+                ),
+                (
+                    "description",
+                    django.contrib.postgres.fields.jsonb.JSONField(
+                        blank=True, null=True
+                    ),
+                ),
+                ("url", models.URLField(blank=True, null=True)),
+                ("status", models.TextField(blank=True, null=True)),
+                ("activation_date", models.DateField(blank=True, null=True)),
+                ("withdrawal_date", models.DateField(blank=True, null=True)),
+                (
+                    "codelist",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="iatistore.IatiCodelist",
+                    ),
+                ),
             ],
         ),
     ]

@@ -10,6 +10,8 @@ from decimal import Decimal, getcontext
 import logging
 
 logger = logging.getLogger(__name__)
+
+
 class IatiXmlTableList(ListView):
     model = iatixmltables.IatiXmlTable
 

@@ -16,7 +16,7 @@ from cachedrequests.requesters import (
 from requests.exceptions import HTTPError
 from xmltables.models import XmlColumn, XmlField, XmlTable
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.contrib.postgres.fields import JSONField
+from django.db.models import JSONField
 from typing import List
 from collections import defaultdict
 from decimal import Decimal
@@ -90,7 +90,8 @@ class IatiActivities(models.Model):
                 logger.error(e)
 
     def __str__(self):
-        return f'{self.iati_identifier}'
+        return f"{self.iati_identifier}"
+
 
 class IatiCodelistMapping(models.Model):
     content = XmlField(null=True)

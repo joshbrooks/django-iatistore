@@ -8,21 +8,39 @@ import xmltables.models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('iatistore', '0007_slugify'),
+        ("iatistore", "0007_slugify"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='IatiCodelist',
+            name="IatiCodelist",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('content', xmltables.models.XmlField()),
-                ('iati_version', models.DecimalField(decimal_places=2, max_digits=3)),
-                ('label', models.TextField()),
-                ('complete', models.BooleanField()),
-                ('embedded', models.BooleanField()),
-                ('name', django.contrib.postgres.fields.jsonb.JSONField(blank=True, null=True)),
-                ('description', django.contrib.postgres.fields.jsonb.JSONField(blank=True, null=True)),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("content", xmltables.models.XmlField()),
+                ("iati_version", models.DecimalField(decimal_places=2, max_digits=3)),
+                ("label", models.TextField()),
+                ("complete", models.BooleanField()),
+                ("embedded", models.BooleanField()),
+                (
+                    "name",
+                    django.contrib.postgres.fields.jsonb.JSONField(
+                        blank=True, null=True
+                    ),
+                ),
+                (
+                    "description",
+                    django.contrib.postgres.fields.jsonb.JSONField(
+                        blank=True, null=True
+                    ),
+                ),
             ],
         ),
     ]

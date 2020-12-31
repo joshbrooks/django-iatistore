@@ -6,12 +6,14 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('iatistore', '0015_auto_20200122_0630'),
+        ("iatistore", "0015_auto_20200122_0630"),
     ]
 
     operations = [
         migrations.AddIndex(
-            model_name='iaticodelistitem',
-            index=models.Index(fields=['codelist', 'code'], name='iatistore_i_codelis_41170f_idx'),
+            model_name="iaticodelistitem",
+            index=models.Index(
+                fields=["codelist", "code"], name="iatistore_i_codelis_41170f_idx"
+            ),
         ),
     ]

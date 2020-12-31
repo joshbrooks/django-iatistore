@@ -7,16 +7,26 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('xmltables', '0002_xmlcolumn_col_xsd_type'),
-        ('iatistore', '0012_auto_20200117_0310'),
+        ("xmltables", "0002_xmlcolumn_col_xsd_type"),
+        ("iatistore", "0012_auto_20200117_0310"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='CodelistMappingXmlColumn',
+            name="CodelistMappingXmlColumn",
             fields=[
-                ('xmlcolumn_ptr', models.OneToOneField(auto_created=True, on_delete=django.db.models.deletion.CASCADE, parent_link=True, primary_key=True, serialize=False, to='xmltables.XmlColumn')),
+                (
+                    "xmlcolumn_ptr",
+                    models.OneToOneField(
+                        auto_created=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        parent_link=True,
+                        primary_key=True,
+                        serialize=False,
+                        to="xmltables.XmlColumn",
+                    ),
+                ),
             ],
-            bases=('xmltables.xmlcolumn',),
+            bases=("xmltables.xmlcolumn",),
         ),
     ]

@@ -7,16 +7,29 @@ import xmltables.models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('iatistore', '0010_auto_20200117_0258'),
+        ("iatistore", "0010_auto_20200117_0258"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='IatiCodelistMapping',
+            name="IatiCodelistMapping",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('content', xmltables.models.XmlField(null=True)),
-                ('iati_version', models.DecimalField(blank=True, decimal_places=2, max_digits=3, null=True)),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("content", xmltables.models.XmlField(null=True)),
+                (
+                    "iati_version",
+                    models.DecimalField(
+                        blank=True, decimal_places=2, max_digits=3, null=True
+                    ),
+                ),
             ],
         ),
     ]

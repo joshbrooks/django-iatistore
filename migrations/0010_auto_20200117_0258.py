@@ -7,23 +7,25 @@ import xmltables.models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('iatistore', '0009_auto_20200117_0252'),
+        ("iatistore", "0009_auto_20200117_0252"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='iaticodelist',
-            name='content',
+            model_name="iaticodelist",
+            name="content",
             field=xmltables.models.XmlField(null=True),
         ),
         migrations.AlterField(
-            model_name='iaticodelist',
-            name='embedded',
+            model_name="iaticodelist",
+            name="embedded",
             field=models.BooleanField(default=False),
         ),
         migrations.AlterField(
-            model_name='iaticodelist',
-            name='iati_version',
-            field=models.DecimalField(blank=True, decimal_places=2, max_digits=3, null=True),
+            model_name="iaticodelist",
+            name="iati_version",
+            field=models.DecimalField(
+                blank=True, decimal_places=2, max_digits=3, null=True
+            ),
         ),
     ]

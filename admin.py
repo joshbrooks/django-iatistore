@@ -21,4 +21,3 @@ class IatiStoreAdmin(admin.ModelAdmin):
 @admin.register(IatiActivities, IatiCodelist, IatiCodelistItem, IatiCodelistMapping)
 class UnmodifiedAdmin(admin.ModelAdmin):
     pass
-

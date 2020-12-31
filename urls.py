@@ -4,7 +4,9 @@ from . import views
 urlpatterns = [
     path("tables/", views.IatiXmlTableList.as_view(), name="iatixmltable-list"),
     path(
-        "table/<pk>/", views.IatiXmlTableDetail.as_view(), name="iatixmltable-detail",
+        "table/<pk>/",
+        views.IatiXmlTableDetail.as_view(),
+        name="iatixmltable-detail",
     ),
     path(
         "table/<pk>/content.json",
@@ -12,7 +14,9 @@ urlpatterns = [
         name="iatixmltable-detail-json",
     ),
     path(
-        "iatiactivities.json", views.IatiActivities.as_view(), name="activities-json",
+        "iatiactivities.json",
+        views.IatiActivities.as_view(),
+        name="activities-json",
     ),
     path(
         "iatitransactions.json",
