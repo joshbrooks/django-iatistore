@@ -1,7 +1,8 @@
 repo_name: joshbrooks/django-iatistore
 report_id: 4fbc13ef148079ceb6e4a242b15ab283
+version: 0.1
 repo_type: Public
-timestamp: '2023-11-09T23:29:32+00:00'
+timestamp: '2024-01-04T15:17:06+00:00'
 requested_by: joshbrooks
 provider: github
 branch: master
@@ -16,6 +17,7 @@ tools:
   category: Languages & Frameworks
   sub_category: Languages
   image_url: https://img.stackshare.io/service/993/pUBY5pVj.png
+  detection_source_url: https://github.com/joshbrooks/django-iatistore
   detection_source: Repo Metadata
 - name: SQL
   description: It is a domain-specific language used in programming
@@ -25,7 +27,8 @@ tools:
   category: Languages & Frameworks
   sub_category: Languages
   image_url: https://img.stackshare.io/service/2271/default_068d33483bba6b81ee13fbd4dc7aab9780896a54.png
-  detection_source: iatisql/codelistitem_name.sql
+  detection_source_url: https://github.com/joshbrooks/django-iatistore/blob/master/iatisql/codelist_description.sql
+  detection_source: iatisql/codelist_description.sql
   last_updated_by: Joshua Brooks
   last_updated_on: 2020-01-22 07:13:39.000000000 Z
 - name: Git
@@ -36,4 +39,5 @@ tools:
   category: Build, Test, Deploy
   sub_category: Version Control System
   image_url: https://img.stackshare.io/service/1046/git.png
+  detection_source_url: https://github.com/joshbrooks/django-iatistore
   detection_source: Repo Metadata
